@@ -23,23 +23,69 @@ MAX_CHUNK = 0xFFC0
 
 
 def first_data(frames: list[Frame], want_cmd: int) -> bytes:
-    """Concatenate data from all frames whose cmd == want_cmd."""
+    """Concatenate the payloads of all frames matching a command.
+
+    Args:
+        frames: The frames to scan.
+        want_cmd: The command code to match.
+
+    Returns:
+        The concatenated ``data`` of every frame whose ``cmd`` equals
+        ``want_cmd`` (empty bytes if none match).
+    """
     return b"".join(f.data for f in frames if f.cmd == want_cmd)
 
 
 class Transport(abc.ABC):
+    """Abstract command transport for a ZK device.
+
+    Implementations move :class:`~openzk.framing.Frame` packets to and from a
+    device. The library depends only on this interface, which allows real
+    sockets and in-memory fakes (for tests) to be used interchangeably.
+    """
+
     @abc.abstractmethod
-    def connect(self) -> None: ...
+    def connect(self) -> None:
+        """Establish the connection and authenticate."""
+
     @abc.abstractmethod
-    def disconnect(self) -> None: ...
+    def disconnect(self) -> None:
+        """Tear down the connection, releasing any resources."""
+
     @abc.abstractmethod
     def capture(self, command: int, data: bytes = b"") -> list[Frame]:
-        """Send a command; return the first response frame plus any follow-on frames."""
+        """Send a command and collect the response frames.
+
+        Args:
+            command: The ZK command code to send.
+            data: Optional command payload.
+
+        Returns:
+            The first response frame followed by any subsequent (streamed)
+            frames the device sends before going idle.
+        """
 
 
 class TcpTransport(Transport):
+    """TCP implementation of :class:`Transport` for ZK devices.
+
+    Speaks the official ZK TCP framing: a connect/auth handshake on
+    :meth:`connect`, request/response with a rolling reply id, and idle-based
+    detection of the end of a streamed response in :meth:`capture`.
+    """
+
     def __init__(self, host: str, port: int = 4370, timeout: float = 10.0,
                  password: int = 0, idle: float = 1.5) -> None:
+        """Initialize the TCP transport.
+
+        Args:
+            host: Device IP address or hostname.
+            port: Device TCP service port (ZKTeco default ``4370``).
+            timeout: Socket connect/read timeout in seconds.
+            password: Numeric comm key used for CMD_AUTH; ``0`` when unset.
+            idle: Seconds of silence used to detect the end of a streamed
+                multi-frame response in :meth:`capture`.
+        """
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -50,6 +96,15 @@ class TcpTransport(Transport):
         self.reply_id = USHRT_MAX - 1
 
     def connect(self) -> None:
+        """Open the socket and perform connect + optional auth.
+
+        Sends CMD_CONNECT; if the device replies CMD_ACK_UNAUTH, follows up with
+        CMD_AUTH using the scrambled comm key.
+
+        Raises:
+            ZKUnreachable: The socket connection could not be established.
+            ZKAuthFailed: The device rejected the connection or comm key.
+        """
         try:
             self._sock = socket.create_connection((self.host, self.port), timeout=self.timeout)
         except OSError as e:
@@ -64,6 +119,11 @@ class TcpTransport(Transport):
             raise ZKAuthFailed(f"connect rejected: cmd={frame.cmd:#06x}")
 
     def disconnect(self) -> None:
+        """Send CMD_EXIT and close the socket.
+
+        Errors during the exit exchange are suppressed; the socket is always
+        closed. Safe to call when already disconnected.
+        """
         if self._sock is not None:
             try:
                 self._exchange(CMD_EXIT)
@@ -100,6 +160,22 @@ class TcpTransport(Transport):
         return frame
 
     def capture(self, command: int, data: bytes = b"") -> list[Frame]:
+        """Send a command and read until the device goes idle.
+
+        Sends one request, then keeps reading frames using the ``idle`` timeout
+        to detect the end of a streamed response.
+
+        Args:
+            command: The ZK command code to send.
+            data: Optional command payload.
+
+        Returns:
+            The first response frame followed by any streamed follow-on frames.
+
+        Raises:
+            ZKProtocolError: A frame had bad magic or the socket closed
+                mid-read.
+        """
         assert self._sock is not None
         frames = [self._exchange(command, data)]
         self._sock.settimeout(self.idle)
@@ -117,8 +193,21 @@ class TcpTransport(Transport):
 
 
 def read_buffer(transport: Transport, command: int, fct: int, ext: int = 0) -> bytes:
-    """Buffered table read: PREPARE_BUFFER(command,fct,ext) then chunked READ_BUFFER.
-    Mirrors the official SDK / pyzk read_with_buffer flow."""
+    """Read a device table via the buffered SDK flow.
+
+    Issues CMD_PREPARE_BUFFER for ``(command, fct, ext)``, then pulls the result
+    in ``MAX_CHUNK``-sized CMD_READ_BUFFER requests and frees the buffer. Mirrors
+    the official SDK / pyzk ``read_with_buffer`` flow.
+
+    Args:
+        transport: The transport used to exchange frames.
+        command: The underlying data command (e.g. CMD_DB_RRQ).
+        fct: The table/function selector for the read.
+        ext: Optional extension parameter passed to PREPARE_BUFFER.
+
+    Returns:
+        The assembled table blob, or empty bytes if the device reports no data.
+    """
     cs = pack("<bhii", 1, command, fct, ext)
     frames = transport.capture(CMD_PREPARE_BUFFER, cs)
     if not frames:
