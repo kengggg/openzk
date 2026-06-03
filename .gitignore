@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# uv
+uv.lock
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Proprietary SDK binaries — local reverse-engineering input only, never committed
+*.dll
+vendor-software/
+
+# Local device exports / runtime output (may contain personal data)
+data/
+*.sqlite

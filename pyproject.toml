@@ -1,0 +1,60 @@
+[project]
+name = "openzk"
+version = "0.1.0"
+description = "A clean, read-only Python client for ZKTeco standalone devices, built on a reverse-engineered SDK protocol."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Keng Susumpow" }]
+keywords = [
+    "zkteco", "biometric", "attendance", "access-control",
+    "fingerprint", "face-recognition", "reverse-engineering",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+# Only needed to re-generate src/openzk/opcodes.py from an SDK binary you supply.
+extract = ["pefile>=2023.2.7", "capstone>=5.0"]
+
+[project.urls]
+Homepage = "https://github.com/kengggg/openzk"
+Repository = "https://github.com/kengggg/openzk"
+Issues = "https://github.com/kengggg/openzk/issues"
+Changelog = "https://github.com/kengggg/openzk/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openzk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: requires OPENZK_LIVE=1 and a live device (skipped by default)",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4"]
