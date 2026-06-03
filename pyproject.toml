@@ -29,6 +29,8 @@ dependencies = []
 dev = ["pytest>=8", "ruff>=0.5"]
 # Only needed to re-generate src/openzk/opcodes.py from an SDK binary you supply.
 extract = ["pefile>=2023.2.7", "capstone>=5.0"]
+# Build the documentation site (mkdocs serve / mkdocs build).
+docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 
 [project.urls]
 Homepage = "https://github.com/kengggg/openzk"

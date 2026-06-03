@@ -48,7 +48,7 @@ disassembling each exported function and reading the opcode constant it sends. T
 are committed in `opcodes.py`. **Payload shapes** were cross-checked against existing open
 clients; **response parsers** (`codecs.py`) were validated byte-for-byte against a real device
 before being relied on. No proprietary code or binary is included — see
-[`../DISCLAIMER.md`](../DISCLAIMER.md).
+[Disclaimer](disclaimer.md).
 
 ## Design rules
 

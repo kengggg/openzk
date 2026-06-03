@@ -26,3 +26,6 @@ vendor-software/
 # Local device exports / runtime output (may contain personal data)
 data/
 *.sqlite
+
+# MkDocs build output
+site/
