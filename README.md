@@ -1,8 +1,11 @@
 # openzk
 
 [![CI](https://github.com/kengggg/openzk/actions/workflows/ci.yml/badge.svg)](https://github.com/kengggg/openzk/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-kengggg.github.io%2Fopenzk-blue.svg)](https://kengggg.github.io/openzk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+
+📖 **Documentation: [kengggg.github.io/openzk](https://kengggg.github.io/openzk/)**
 
 A clean, **read-only** Python client for ZKTeco standalone access-control / time-attendance
 devices, speaking their proprietary TCP protocol (port 4370).
